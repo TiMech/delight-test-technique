@@ -113,6 +113,40 @@ resource "aws_db_subnet_group" "dtt_subnet_group_rds" {
   }
 }
 
+# Table de routage qui sera utilisé dans le sous-réseau privé de la BDD
+# Le sujet ne précise pas de règles de sortie depuis le sous-réseau donc
+# aucune n'est ajoutée. En conséquence, aucun traffic sortant ne sera 
+# routé en dehors du VPC.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table
+resource "aws_route_table" "dtt_route_private_rds" {
+
+  # Le vpc qui acceuillera la table de routage
+  vpc_id = aws_vpc.dtt_vpc.id
+
+  # Les étiquettes utilisées pour classer les ressources ou indentifier des
+  # groupes de ressources définies
+  tags = {
+    Name                = "dtt-route-private-rds"
+    environment         = "${var.dtt_environment_tag}"
+    exposition          = "private"
+  }  
+}
+
+# Associe la table de routage privée RDS avec les sous-réseaux cible.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association
+resource "aws_route_table_association" "dtt_subnet_route_association_private_rds" {
+
+  # On itère sur chaque sous-réseau privé utlisé pour acceuillir la base de
+  # donnée.
+  for_each       = aws_subnet.dtt_subnets_private_rds
+
+  # L'identifiant du sous réseau à associer : le sous-réseau public compute
+  subnet_id      = each.value.id
+
+  # L'identifiant de la table de routage à associer
+  route_table_id = aws_route_table.dtt_route_private_rds.id
+}
+
 resource "aws_db_instance" "dtt_rds" {
 
   # Type de d'instance acceuillant la BDD.
@@ -128,7 +162,7 @@ resource "aws_db_instance" "dtt_rds" {
 
   # Groupes de sécurité à appliquer sur la BDD. Ce sont les règles de filtrage
   # réseau qui vont être executées.
-  vpc_security_group_ids = [aws_security_group.allow_bdd_in.id]
+  vpc_security_group_ids = [aws_security_group.dtt_allow_bdd_in.id]
 
   # Nom d'utilisateur de l'administrateur
   username               = "${var.dtt_rds_username}"
@@ -153,7 +187,7 @@ resource "aws_db_instance" "dtt_rds" {
 
 # Le sous réseau public du VPC qui contiens la ressource de compute (instance EC2)
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet
-resource "aws_subnet" "dtt_subnet_public_ec2" {
+resource "aws_subnet" "dtt_subnets_public_ec2" {
 
   # Pour chaque clé de la variable on crée un sous-réseau
   for_each = var.dtt_compute_availability_zones_parameters
@@ -181,45 +215,194 @@ resource "aws_subnet" "dtt_subnet_public_ec2" {
   }
 }
 
+
+# Table de routage qui sera utilisé dans le sous-réseau public des EC2.*
+# Le sujet ne précise pas de règles de sortie depuis le sous-réseau donc
+# aucune n'est ajoutée. En conséquence, aucun traffic sortant ne sera 
+# routé en dehors du VPC.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table
+resource "aws_route_table" "dtt_route_public_ec2" {
+
+  # Le vpc qui acceuillera la table de routage
+  vpc_id = aws_vpc.dtt_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0\0"
+    gateway_id = aws_internet_gateway.dtt-internet-gw.id
+  }
+
+  # Les étiquettes utilisées pour classer les ressources ou indentifier des
+  # groupes de ressources définies
+  tags = {
+    Name                = "dtt-route-public-compute"
+    environment         = "${var.dtt_environment_tag}"
+    exposition          = "public"
+  }  
+}
+
+# Associe la table de routage publique EC2 avec le sous-réseau cible.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association
+resource "aws_route_table_association" "dtt_subnet_route_association_public_ec2" {
+
+  # On itère sur chaque sous-réseau privé utlisé pour acceuillir la base de
+  # donnée.
+  for_each       = aws_subnet.dtt_subnets_public_ec2
+
+  # L'identifiant du sous réseau à associer : le sous-réseau public compute
+  subnet_id      = each.value.id
+
+  # L'identifiant de la table de routage à associer
+  route_table_id = aws_route_table.dtt_route_public_ec2.id
+}
+
+resource "aws_key_pair" "dtt_key_compute" {
+  key_name    = "dtt-key-compute"
+  public_key  = file("dtt_compute_key.pub")  
+}
+
+data "aws_ami" "al2023" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-arm64"]
+  }
+
+  # Amazon
+  owners = ["137112412989"]
+}
+
+resource "aws_instance" "dtt_compute_instances" {
+
+  # On itère sur chaque sous-réseau public utlisé
+  for_each       = aws_subnet.dtt_subnets_public_ec2
+
+  # Image machine à utiliser
+  ami           = data.aws_ami.al2023.id
+
+  # Format d'instance à utiliser
+  instance_type = "t4g.micro"
+
+  # L'identifiant du sous réseau à associer à l'instance,
+  # le sous-réseau public compute
+  subnet_id      = each.value.id
+
+  # On ajoute les règles de filtrage permettant l'accès SSH
+  vpc_security_group_ids = [aws_security_group.dtt_allow_ssh_in.id, aws_security_group.dtt_allow_traffic_out.id]
+
+  # La clé ssh à utiliser pour se connecter à l'instance
+  key_name       = aws_key_pair.dtt_key_compute.key_name
+
+  tags = {
+    Name = "dtt-compute-instance"
+  }
+}
+
+resource "aws_internet_gateway" "dtt-internet-gw" {
+  vpc_id = aws_vpc.dtt_vpc.id
+
+  tags = {
+    Name = "main"
+  }
+}
+
+resource "aws_eip" "dtt_compute_eip" {
+
+  # On itère sur chaque sous-réseau public utlisé
+  for_each = aws_instance.dtt_compute_instances
+  instance = each.value.id
+  depends_on = [aws_internet_gateway.dtt-internet-gw]
+}
+
 # ------------------------------------------------------------------------------
 # SECURITY GROUPS
 # Dans cette section sont déclarées les groupes et règles de sécurité
 # ------------------------------------------------------------------------------
 
-resource "aws_security_group" "allow_ssh" {
-  name        = "allow_ssh"
+# Règle de filtrage permettant le passage des paquets sur le port 22 entrant
+# afin d'autoriser les connection SSH entrante.
+resource "aws_security_group" "dtt_allow_ssh_in" {
+
+  # Nom de la règle
+  name        = "dtt-allow-ssh-in"
+
+  # VPC acceuillant la règle 
   vpc_id      = aws_vpc.dtt_vpc.id
 
+  # Flux entrant avec ses caractéristiques (ports, protocole concerné, plage
+  # d'adresses concernées par la règle...). Ici on autorise la connection depuis
+  # n'importe quelle adresse IP
   ingress {
     description      = "SSH from VPC"
     from_port        = 22 
     to_port          = 22 
     protocol         = "tcp"
     cidr_blocks      = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = -1
-    cidr_blocks = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
 
+  # Les étiquettes utilisées pour classer les ressources ou indentifier des
+  # groupes de ressources définies
   tags = {
-    Name = "allow_ssh"
+    Name                = "dtt-allow-ssh-in"
+    environment         = "${var.dtt_environment_tag}"
   }
 }
 
-resource "aws_security_group" "allow_bdd_in" {
+
+# Règle de filtrage permettant la communication sortante vers le port 5432 
+# utilisé par la BDD. 
+resource "aws_security_group" "dtt_allow_traffic_out" {
+
+  # Nom de la règle
+  name        = "dtt-allow-traffic-out"
+
+  # VPC acceuillant la règle 
   vpc_id      = aws_vpc.dtt_vpc.id
-  name        = "allow_bdd_in"
-  description = "Allow all inbound traffic for Postgres"
-  
+
+  # Flux entrant avec ses caractéristiques (ports, protocole concerné, plage
+  # d'adresses concernées par la règle...). Ici on autorise la sortie vers
+  # n'importe quelle IP vers le port 5432
+  egress {
+    description      = "Allow outgoing traffic"
+    from_port        = 0 
+    to_port          = 0 
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  # Les étiquettes utilisées pour classer les ressources ou indentifier des
+  # groupes de ressources définies
+  tags = {
+    Name                = "dtt-allow-traffic-out"
+    environment         = "${var.dtt_environment_tag}"
+  }
+}
+
+# Règle de filtrage permettant la communication sortante vers le port 5432 
+# utilisé par la BDD. 
+resource "aws_security_group" "dtt_allow_bdd_in" {
+
+  # Nom de la règle
+  name        = "dtt-allow-bdd-in"
+
+  # VPC acceuillant la règle 
+  vpc_id      = aws_vpc.dtt_vpc.id
+
+  # Flux entrant avec ses caractéristiques (ports, protocole concerné, plage
+  # d'adresses concernées par la règle...). Ici on autorise la sortie vers
+  # n'importe quelle IP vers le port 5432
   ingress {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Les étiquettes utilisées pour classer les ressources ou indentifier des
+  # groupes de ressources définies
+  tags = {
+    Name                = "dtt-allow-bdd-in"
+    environment         = "${var.dtt_environment_tag}"
   }
 }
