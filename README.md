@@ -102,8 +102,12 @@ Do you want to perform these actions?
 
 Si vous voulez appliquer les modifications sur AWS, entrez `yes`. Dans tout autre cas les modifications seront abandonnées.
 
-Les modifications vont alors se dérouler, ces dernières peuvent prendre plusieurs minutes.
+Les modifications vont alors se dérouler, ces dernières peuvent prendre plusieurs minutes (la création de la base de donnée plus particulièrement).
 
+
+**Supprimer l'infrastructure**
+
+--
 
 ## Méthodologie de réalisation
 

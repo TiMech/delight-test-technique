@@ -93,6 +93,22 @@ variable "dtt_rds_password" {
   sensitive   = true
 }
 
+# Déclaration du type d'instance à utiliser pour acceuillier la BDD
+variable "dtt_rds_instance_type" {
+  description = "RDS Instance type."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+# Volume de stockage alloué à l'instance de la base de donnée. Nous mettons
+# cette valeur très basse car la BDD ne sera pas effectivement utilisé pour
+# ce test.
+variable "dtt_rds_allocated_storage" {
+  description = "Storage allocated to the RDS"
+  type        = number
+  default     = 5
+}
+
 # Liste des zone de disponibilités au sein de la region que l'on souhaite
 # utiliser et les éléments de configuration associés. 
 # Pour le moment, seul le bloc CIDR de chaque zone est associé.
