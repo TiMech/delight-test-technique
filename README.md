@@ -26,6 +26,7 @@ Le but de ce test de faire un PoC qui permet de tester le déploiement d’une i
 ### Pré-requis
 
 **AWS**
+
 Avant toute chose, vous devez disposer d'un compte AWS et des credentials pour y accéder et créer des ressources. 
 
 Assurer-vous que vos credentials soient présents dans le fichier `~/.aws/credentials`. Terraform utilisera ces éléments pour se connecter. 
@@ -36,6 +37,7 @@ Pour plus de précisions à ce sujet, référez vous à la page officielle suiva
 
 
 **Terraform**
+
 Terraform doit être installé sur votre poste de travail. Veuillez vous référer au lien suivant pour connaitre la démarche à adopter suivant votre configuration : 
 
 :paperclip: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
