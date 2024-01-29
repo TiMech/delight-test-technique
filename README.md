@@ -30,12 +30,16 @@ Avant toute chose, vous devez disposer d'un compte AWS et des credentials pour y
 
 Assurer-vous que vos credentials soient présents dans le fichier `~/.aws/credentials`. Terraform utilisera ces éléments pour se connecter. 
 
-Pour plus de précisions à ce sujet, référez vous à la page officielle suivante : 
+Pour plus de précisions à ce sujet, référez vous à la page officielle suivante :
+
 :paperclip: https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
+
 
 **Terraform**
 Terraform doit être installé sur votre poste de travail. Veuillez vous référer au lien suivant pour connaitre la démarche à adopter suivant votre configuration : 
+
 :paperclip: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+
 
 ### Préparation du plan
 
