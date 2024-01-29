@@ -151,9 +151,44 @@ variable "dtt_compute_availability_zones_parameters" {
   default = {
     "us-east-1a" : {
       cidr_block    = "10.0.1.0/24"
-      instances     = 1
     }
   }
 
   description = "Defines availability zones and associated paramters used for the compute resource."
+}
+
+variable "dtt_compute_instances_parameters" {
+
+  # Définition du format de la variable  
+  type = map(object({
+    availability_zone = string
+    type              = string
+  }))
+  
+  default = {
+    "dtt-compute-instance-1" : {
+      availability_zone = "us-east-1a"
+      type              = "t4g.micro"
+    }
+  }
+
+  description = "Defines availability zones and associated paramters used for the compute resource."
+}
+
+# Image de l'OS qui sera utilisée comme template sur les instances EC2
+# Ici on recherche les OS officiel d'Amazon dans leur version AL2023.
+# Le test précisant un format d'instance t4g.micro, ces instances sont
+# conçues avec des processeurs Graviton2 AWS basés sur Arm. Nous sélectionnons
+# donc la version de l'OS correspondante.
+data "aws_ami" "dtt_ami_al2023" {
+  most_recent = true
+
+  # Filtre les images disponibles selon leur nom, avec le pattern défini
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-arm64"]
+  }
+
+  # Amazon
+  owners = ["137112412989"]
 }

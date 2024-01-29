@@ -33,18 +33,13 @@ Assurer-vous que vos credentials soient présents dans le fichier `~/.aws/creden
 **Terraform**
 Terraform doit être installé sur votre poste de travail. Veuillez vous référer au lien suivant pour connaitre la démarche à adopter suivant votre configuration : https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 
-### Initialisation
-
-
-Ouvrez un terminal de commande et placez vous dans le dossier où sont situés les fichiers de cette pile terraform.
-
-Terraform nécessite des éléments relatifs au providers décris dans les fichiers pour executer le plan. Pour cela nous devons "initialiser" le dossier en récupérant ces éléments via la commande suivante :
+Il faut maintenant télécharger les plugins nécessaires à l'execution de notre plan terraform. Pour cela, ouvrez un terminal de commande et placez vous dans le dossier où sont situés les fichiers du plan terraform. Entrez la commande ci-dessous pour lancer le téléchargement des plugins.
 
 ```sh
 $ terraform init
 ```
 
-Un message de succès devrait apparaitre après le téléchargement effectif des plugins :
+Un message de succès devrait apparaitre après le téléchargement.
 
 ```sh
 Terraform has been successfully initialized!
@@ -69,6 +64,14 @@ $ export TF_VAR_dtt_rds_username=<entrez_ici_la_valeur>
 $ export TF_VAR_dtt_rds_password=<entrez_ici_une_autre_valeur>
 ```
 
+**Générer la paire de clé SSH permettant de se connecter à l'instance EC2**
+
+Il est nécessaire de disposer d'une paire de clé pour se connecter 
+
+```sh
+$ ssh-keygen -t ed25519 -f ./dtt_compute_key
+```
+
 **Vérifiez la pile**
 
 Nous allons maintenant demander à Terraform de créer un plan d'execution et nous permettre de le visualiser afin de vérifier les opérations qu'ils mettra en oeuvre lors de l'execution effective. Toujours dans le même dossier, entrez la commande suivante :
@@ -86,7 +89,9 @@ Plan: 5 to add, 0 to change, 0 to destroy.
 
 **Executer les modifications d'infrastructure**
 
-Maintenant que tout semmble correct, il est temps de réaliser effectivement les modifications décrites dans le code. Pour cela, toujours dans le même dossier, exécutez la commande suivante :
+Dans cette partie, nous allons appliquer les modifications d'infrastructure décrites dans le code. 
+
+Toujours dans le même dossier, exécutez la commande suivante :
 
 ```sh
 $ terraform apply
@@ -103,6 +108,15 @@ Do you want to perform these actions?
 Si vous voulez appliquer les modifications sur AWS, entrez `yes`. Dans tout autre cas les modifications seront abandonnées.
 
 Les modifications vont alors se dérouler, ces dernières peuvent prendre plusieurs minutes (la création de la base de donnée plus particulièrement).
+
+### Vérifier l'accès au système de BDD depuis le serveur
+
+Afin de vérifier que l'instance serveur puisse se connecter à la base de donnée, nous allons :
+- Nous connecter en SSH sur l'instance EC2
+- Installer le client postgresql
+- Nous connecter sur la base de donnée RDS PostgreSQL
+
+
 
 
 **Supprimer l'infrastructure**

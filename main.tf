@@ -147,6 +147,9 @@ resource "aws_route_table_association" "dtt_subnet_route_association_private_rds
   route_table_id = aws_route_table.dtt_route_private_rds.id
 }
 
+# Crée une instance de base de donnée relationnelle de type PostgreSQL selon
+# le format défini dans le sujet. On y ajoute une database de test afin
+# de pouvoir évaluer la connection.
 resource "aws_db_instance" "dtt_rds" {
 
   # Type de d'instance acceuillant la BDD.
@@ -155,6 +158,10 @@ resource "aws_db_instance" "dtt_rds" {
 
   # Espace destockage alloué à la BDD
   allocated_storage      = var.dtt_rds_allocated_storage
+
+  # Nom de la base de donnée initiale (utilisé pour créer une base à observer
+  # dans le cadre du test)
+  db_name               = "mydb"
 
   # Moteur de base de donné (MySQL, PostgreSQL, Aura...)
   # Consignes = "postgres"
@@ -227,7 +234,7 @@ resource "aws_route_table" "dtt_route_public_ec2" {
   vpc_id = aws_vpc.dtt_vpc.id
 
   route {
-    cidr_block = "0.0.0.0\0"
+    cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.dtt-internet-gw.id
   }
 
@@ -260,44 +267,36 @@ resource "aws_key_pair" "dtt_key_compute" {
   public_key  = file("dtt_compute_key.pub")  
 }
 
-data "aws_ami" "al2023" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-arm64"]
-  }
-
-  # Amazon
-  owners = ["137112412989"]
-}
-
+# Instances EC2 de calcul, le "serveur" de l'exercice.Une seule machine est
+# configurée dans les paramètres donc une seule instance sera initiée. 
 resource "aws_instance" "dtt_compute_instances" {
 
-  # On itère sur chaque sous-réseau public utlisé
-  for_each       = aws_subnet.dtt_subnets_public_ec2
+  # On itère sur chaque instance définie dans les paramètres (1 pour l'exemple)
+  for_each       = var.dtt_compute_instances_parameters
 
   # Image machine à utiliser
-  ami           = data.aws_ami.al2023.id
+  ami           = data.aws_ami.dtt_ami_al2023.id
 
   # Format d'instance à utiliser
-  instance_type = "t4g.micro"
+  instance_type = "${each.value.type}"
 
-  # L'identifiant du sous réseau à associer à l'instance,
-  # le sous-réseau public compute
-  subnet_id      = each.value.id
+  # L'identifiant du sous réseau public à associer à l'instance, on récupère celui
+  # associé à la zone de disponibilité.
+  subnet_id     = aws_subnet.dtt_subnets_public_ec2[each.value.availability_zone].id
 
   # On ajoute les règles de filtrage permettant l'accès SSH
   vpc_security_group_ids = [aws_security_group.dtt_allow_ssh_in.id, aws_security_group.dtt_allow_traffic_out.id]
 
   # La clé ssh à utiliser pour se connecter à l'instance
-  key_name       = aws_key_pair.dtt_key_compute.key_name
+  key_name      = aws_key_pair.dtt_key_compute.key_name
 
   tags = {
     Name = "dtt-compute-instance"
   }
 }
 
+# Passerelle permettant à l'instace EC2 de communiquer avec avec internet. Utile
+# pour récupérer le client Postgresql afin de communiquer avec le serveur de BDD
 resource "aws_internet_gateway" "dtt-internet-gw" {
   vpc_id = aws_vpc.dtt_vpc.id
 
@@ -306,6 +305,8 @@ resource "aws_internet_gateway" "dtt-internet-gw" {
   }
 }
 
+# Ressource elastic IP permettant à l'instance EC2 de posséder une IP publique
+# afin de pouvoir se connecter directement sur la machine depuis internet
 resource "aws_eip" "dtt_compute_eip" {
 
   # On itère sur chaque sous-réseau public utlisé
@@ -349,7 +350,6 @@ resource "aws_security_group" "dtt_allow_ssh_in" {
   }
 }
 
-
 # Règle de filtrage permettant la communication sortante vers le port 5432 
 # utilisé par la BDD. 
 resource "aws_security_group" "dtt_allow_traffic_out" {
@@ -360,14 +360,13 @@ resource "aws_security_group" "dtt_allow_traffic_out" {
   # VPC acceuillant la règle 
   vpc_id      = aws_vpc.dtt_vpc.id
 
-  # Flux entrant avec ses caractéristiques (ports, protocole concerné, plage
-  # d'adresses concernées par la règle...). Ici on autorise la sortie vers
-  # n'importe quelle IP vers le port 5432
+  # Permet les flux sortants de la machine (A restreindre selon les besoins
+  # effectifs)
   egress {
     description      = "Allow outgoing traffic"
     from_port        = 0 
     to_port          = 0 
-    protocol         = "tcp"
+    protocol         = "-1"
     cidr_blocks      = ["0.0.0.0/0"]
   }
 
