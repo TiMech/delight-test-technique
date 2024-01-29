@@ -1,9 +1,8 @@
 # Test Technique - Création d’une pile Terraform.
 
-_ANDREY Thomas_
-_Janvier 2024_
+_ANDREY Thomas_ / _Janvier 2024_
 
-## Sujet
+## Sujet
 
 ```
 💡 Bien qu’utilisant des ressources AWS, ce test se base sur l’offre gratuite d’AWS. Il suffit juste de créer un nouveau compte pour en bénéficier.  **Cela ne doit rien couter!**
@@ -22,7 +21,7 @@ Le but de ce test de faire un PoC qui permet de tester le déploiement d’une i
 5) Supprimer la EC2 et RDS.
 6) Nous transmettre le répertoire en mode public.
 
-## Déploiement de la pile Terraform
+## Déploiement de la pile Terraform
 
 ### Pré-requis
 
@@ -239,7 +238,7 @@ Do you want to perform these actions?
 
 Entrez `yes` pour appliquer les destructions. Toute autre réponse entraine un abandon. Les modifications vont alors se dérouler, ces dernières peuvent prendre **plusieurs minutes**.
 
-## Méthodologie de réalisation
+## Méthodologie de réalisation
 
 **Compréhension des attendus**
 
@@ -252,9 +251,29 @@ Sont explicitement attendus de moi :
   - La rédaction d'un plan Terraform afin d'executer ces éléments.
   - La documentation associée et ma démarche.
 
+**Recherche documentaire et conception**
 
+A partir de ce constat, j'ai recherché dans la documentation officielle de Terraform le fonctionnement global de l'outil, ainsi que des exemples divers sur la toile. J'ai complété ces éléments par la documentation AWS afin de bien saisir les concepts de ce provider.
 
+Je suis partis des attendus vers les éléments induits qui ne sont pas mentionnés dans le sujet (VPC, Security groups...) afin d'obtenir une vision d'ensemble. Une fois le que la syntaxe et la méthode de fonctionnement de Terraform sont démystifiées, la compréhension et l'enchainement des briques structurelles à mettre en place est plutôt clair, malgré quelques subtilités. La recherche documentaire effectuée et les essais menés sur des éléments distincts, j'ai imaginé l'architecture finale que je souhaitais atteindre.
 
+**Réalisation**
+
+j'ai construit mon code incrémentalement en mettant en place les briques structurelles pas à pas. A chaque incrément le plan terraform a été testé, appliqué et détruit. J'ai pu ainsi corriger les erreurs de syntaxe ou de conception au fil de l'eau. 
+
+Ont été implémentés dans l'ordre :
+- Le VPC
+- Les sous-réseaux
+- Les security groups
+- Les tables de routages
+- L'instance RDS Postgresql
+- L'instance EC2
+
+La documentation a été produit paralèllement au code. Une fois l'ensemble réalisé, j'ai supprimé tous les éléments de mon poste, récupéré le plan Terraform depuis le dépôt et suivi scrupuleusement chaque étape pour m'assurer qu'aucune erreur ne s'était glissée dans le processus. 
+
+**Conclusion**
+
+L'acquisition des connaissances relatives à Terraform et AWS ainsi que la conception de ce plan n'ont pas soulevé de difficultés. L'architecture restant contenue et simple, elle permet toutefois de toucher du doigt l'étendue des possibilités offertes par l'infrastructure as code, ainsi que d'apercevoir les challenges qui peuvent y être associés. Ce test technique s'est révélé très enrichissant et confirme mon intérêt pour les sujets devops, cloud et IaaC.
 
 
 
