@@ -161,7 +161,7 @@ resource "aws_db_instance" "dtt_rds" {
 
   # Nom de la base de donnée initiale (utilisé pour créer une base à observer
   # dans le cadre du test)
-  db_name               = "mydb"
+  db_name               = "${var.dtt_rds_db_name}"
 
   # Moteur de base de donné (MySQL, PostgreSQL, Aura...)
   # Consignes = "postgres"
@@ -262,9 +262,32 @@ resource "aws_route_table_association" "dtt_subnet_route_association_public_ec2"
   route_table_id = aws_route_table.dtt_route_public_ec2.id
 }
 
+# Récupération de la clé publique SSH afin de la disposer ultérieurement dans
+# une instance où l'on souhaitera pouvoir se connecter en SSH.
 resource "aws_key_pair" "dtt_key_compute" {
   key_name    = "dtt-key-compute"
   public_key  = file("dtt_compute_key.pub")  
+}
+
+# Cartes réseaux virtuelles des instances EC2. Cela nous permet de controller
+# les adresses des machines pour une utilisation future
+resource "aws_network_interface" "dtt_compute_instances_network_interfaces" {
+  
+  # On itère sur chaque instance définie dans les paramètres (1 pour l'exemple)
+  for_each       = var.dtt_compute_instances_parameters
+
+  # Dans quel sous-réseau elle prends place
+  subnet_id   = aws_subnet.dtt_subnets_public_ec2[each.value.availability_zone].id
+
+  # Quelle est l'adresse IP à utiliser
+  private_ips = ["${each.value.private_ip}"]
+
+  security_groups = [aws_security_group.dtt_allow_ssh_in.id, aws_security_group.dtt_allow_traffic_out.id]
+
+  tags = {
+    Name                = "dtt-network-interface-${each.key}"
+    exposition          = "public"
+  }
 }
 
 # Instances EC2 de calcul, le "serveur" de l'exercice.Une seule machine est
@@ -282,16 +305,20 @@ resource "aws_instance" "dtt_compute_instances" {
 
   # L'identifiant du sous réseau public à associer à l'instance, on récupère celui
   # associé à la zone de disponibilité.
-  subnet_id     = aws_subnet.dtt_subnets_public_ec2[each.value.availability_zone].id
+  # subnet_id     = aws_subnet.dtt_subnets_public_ec2[each.value.availability_zone].id
 
-  # On ajoute les règles de filtrage permettant l'accès SSH
-  vpc_security_group_ids = [aws_security_group.dtt_allow_ssh_in.id, aws_security_group.dtt_allow_traffic_out.id]
+  # Interface réseau à attribuer à cette instance. On utilise celle précédemment
+  # créée
+  network_interface {
+    network_interface_id = aws_network_interface.dtt_compute_instances_network_interfaces[each.key].id
+    device_index         = 0
+  }
 
   # La clé ssh à utiliser pour se connecter à l'instance
   key_name      = aws_key_pair.dtt_key_compute.key_name
 
   tags = {
-    Name = "dtt-compute-instance"
+    Name = "${each.key}"
   }
 }
 
@@ -303,16 +330,6 @@ resource "aws_internet_gateway" "dtt-internet-gw" {
   tags = {
     Name = "main"
   }
-}
-
-# Ressource elastic IP permettant à l'instance EC2 de posséder une IP publique
-# afin de pouvoir se connecter directement sur la machine depuis internet
-resource "aws_eip" "dtt_compute_eip" {
-
-  # On itère sur chaque sous-réseau public utlisé
-  for_each = aws_instance.dtt_compute_instances
-  instance = each.value.id
-  depends_on = [aws_internet_gateway.dtt-internet-gw]
 }
 
 # ------------------------------------------------------------------------------

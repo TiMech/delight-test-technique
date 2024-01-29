@@ -93,6 +93,15 @@ variable "dtt_rds_password" {
   sensitive   = true
 }
 
+# Déclaration de la variable du nom de la base de donnée par défaut
+variable "dtt_rds_db_name" {
+  description = "Database default name"
+  type        = string
+  sensitive   = true
+  default     = "mydb"
+}
+
+
 # Déclaration du type d'instance à utiliser pour acceuillier la BDD
 variable "dtt_rds_instance_type" {
   description = "RDS Instance type."
@@ -157,18 +166,25 @@ variable "dtt_compute_availability_zones_parameters" {
   description = "Defines availability zones and associated paramters used for the compute resource."
 }
 
+# Sont regroupées ici les données spécifique à chaque instance EC2.
+# Pour le test, seulement une seule est définie dans le format précisé
+# par le sujet. 
+# On configure dans quelle zone de disponibilité placer l'instance, son format
+# ainsi que son IP privée.
 variable "dtt_compute_instances_parameters" {
 
   # Définition du format de la variable  
   type = map(object({
     availability_zone = string
     type              = string
+    private_ip        = string
   }))
   
   default = {
     "dtt-compute-instance-1" : {
       availability_zone = "us-east-1a"
       type              = "t4g.micro"
+      private_ip        = "10.0.1.10"
     }
   }
 

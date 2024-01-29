@@ -35,3 +35,7 @@ terraform.rc
 
 # Ignore lock, for the exercise purpose
 .terraform.lock.hcl
+.terraform
+
+# Ignore key, for the exercise
+dtt_compute_key*
