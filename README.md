@@ -28,14 +28,18 @@ Le but de ce test de faire un PoC qui permet de tester le déploiement d’une i
 **AWS**
 Avant toute chose, vous devez disposer d'un compte AWS et des credentials pour y accéder et créer des ressources. 
 
-Assurer-vous que vos credentials soient présents dans le fichier `~/.aws/credentials`. Terraform utilisera ces éléments pour se connecter. Pour plus de précisions à ce sujet, référez vous à la page officielle suivante : https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
+Assurer-vous que vos credentials soient présents dans le fichier `~/.aws/credentials`. Terraform utilisera ces éléments pour se connecter. 
+
+Pour plus de précisions à ce sujet, référez vous à la page officielle suivante : 
+:paperclip: https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
 
 **Terraform**
-Terraform doit être installé sur votre poste de travail. Veuillez vous référer au lien suivant pour connaitre la démarche à adopter suivant votre configuration : https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+Terraform doit être installé sur votre poste de travail. Veuillez vous référer au lien suivant pour connaitre la démarche à adopter suivant votre configuration : 
+:paperclip: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 
 ### Préparation du plan
 
-_Il n'est pas nécessaire de réitérer cette étape a chaque application du plan, seulement si un nouveau plugin doit être téléchargé._
+:pushpin: _Il n'est pas nécessaire de réitérer cette étape a chaque application du plan, seulement si un nouveau plugin doit être téléchargé._
 
 Après avoir récupéré les fichiers *.tf qui constituent le plan terraform, l'outil à besoin de récupérer les plugins nécessaires à leur mise en oeuvre. 
 
@@ -64,13 +68,15 @@ $ export TF_VAR_dtt_rds_username=test
 $ export TF_VAR_dtt_rds_password=delight_pwd
 ```
 
-_Les commandes Terraform qui vont suivre sont à exécuter dans la même console afin de bénéficier de ces variables d'environnement._
+
+:pushpin: _Les commandes Terraform qui vont suivre sont à exécuter dans la même console afin de bénéficier de ces variables d'environnement._
+
 
 **Générer la paire de clé SSH permettant de se connecter à l'instance EC2**
 
 Pour pouvoir se connecter ultérieurement à notre instance EC2, il est primordial de disposer d'une paire de clés SSH. Lors de la création de l'instace, la clé publique sera délivrée à cette première afin d'autorisé l'accès de l'administrateur détenteur de la clé privée.
 
-**Ce procédé est utilisé tel quel pour les besoins de simplicité de l'exercice et ne relève aucunement d'une "best practice". Elle n'assure pas en tant que tel une sécurité optimale des clés SSH et un travail collaboratif.**
+:exclamation: **Ce procédé est utilisé tel quel pour les besoins de simplicité de l'exercice et ne relève aucunement d'une "best practice". Elle n'assure pas en tant que tel une sécurité optimale des clés SSH et un travail collaboratif.**
 
 Pour générer la clé utilisée dans ce projet, entrez la commande ci-dessous dans la console, toujours dans le même dossier. Laissez vide la passphrase que le système vous demandera.
 
@@ -91,7 +97,7 @@ $ terraform plan
 
 Si tout s'execute normalement, une liste de modification devrait s'afficher après quelques secondes avec la quantité d'éléments à ajouter, modifier et détruire.
 
-_Exemple_
+:question: _Exemple_
 ```sh
 Plan: 18 to add, 0 to change, 0 to destroy.
 ```
@@ -256,6 +262,8 @@ Sont explicitement attendus de moi :
 A partir de ce constat, j'ai recherché dans la documentation officielle de Terraform le fonctionnement global de l'outil, ainsi que des exemples divers sur la toile. J'ai complété ces éléments par la documentation AWS afin de bien saisir les concepts de ce provider.
 
 Je suis partis des attendus vers les éléments induits qui ne sont pas mentionnés dans le sujet (VPC, Security groups...) afin d'obtenir une vision d'ensemble. Une fois le que la syntaxe et la méthode de fonctionnement de Terraform sont démystifiées, la compréhension et l'enchainement des briques structurelles à mettre en place est plutôt clair, malgré quelques subtilités. La recherche documentaire effectuée et les essais menés sur des éléments distincts, j'ai imaginé l'architecture finale que je souhaitais atteindre.
+
+![](/imgs/dtt_archi.jpg)
 
 **Réalisation**
 
